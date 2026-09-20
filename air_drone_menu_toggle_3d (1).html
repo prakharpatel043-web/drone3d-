@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIR DRONE — Skye-Style Delivery Concept</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#05070a;color:#fff;font-family:Arial,Helvetica,sans-serif}
+#app{position:fixed;inset:0}#view{position:absolute;inset:0}
+canvas{display:block}
+.panel{position:absolute;z-index:10;left:18px;top:18px;display:none;width:min(420px,calc(100vw - 36px));padding:16px;border:1px solid #ffffff20;border-radius:18px;background:#0b0f14d9;backdrop-filter:blur(14px);box-shadow:0 18px 60px #0008}
+.brand{display:flex;gap:11px;align-items:center}.mark{height:42px;width:42px;border-radius:12px;background:#fff;color:#111;display:grid;place-items:center;font-weight:900;font-size:21px}
+h1{font-size:21px;margin:0;letter-spacing:.08em}.sub{font-size:10px;color:#a9b0b8;letter-spacing:.12em;margin-top:3px}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.row.two{grid-template-columns:1fr 1fr;margin-top:8px}
+button{min-height:44px;border:1px solid #ffffff25;border-radius:10px;background:#121820;color:#fff;font-weight:800;cursor:pointer}
+button:hover{background:#1d2630}button:focus-visible{outline:2px solid white;outline-offset:2px}
+.primary{background:#fff;color:#0b0b0b;border-color:#fff}
+.status{margin-top:11px;padding:10px;border:1px solid #ffffff15;border-radius:10px;background:#080b0f;color:#cbd2d9;font-size:11px;line-height:1.45}
+.specs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.spec{padding:9px;border:1px solid #ffffff12;border-radius:10px;background:#ffffff05}
+.k{font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#7f8993}.v{margin-top:4px;font-size:12px;font-weight:800}
+.note{margin-top:10px;color:#76808b;font-size:10px;line-height:1.45}
+.panel.open{display:block}.menuButton{position:absolute;z-index:11;left:18px;top:18px;width:48px;height:48px;border:1px solid #ffffff25;border-radius:14px;background:#fff;color:#111;font-weight:900;font-size:22px;cursor:pointer;box-shadow:0 10px 30px #0008}.menuButton:hover{background:#e8e8e8}.menuButton:focus-visible{outline:2px solid #fff;outline-offset:2px}.badge{position:absolute;z-index:10;right:18px;top:18px;border:1px solid #ffffff18;background:#0b0f14c9;border-radius:999px;padding:9px 12px;color:#cbd2d9;font-size:9px;letter-spacing:.13em}
+#batteryBar{height:5px;background:#20252b;border-radius:9px;overflow:hidden;margin-top:5px}#batteryBar i{display:block;width:100%;height:100%;background:#fff;transform-origin:left}
+@media(max-width:560px){.panel{left:9px;top:67px;width:calc(100vw - 18px);padding:12px}.menuButton{left:9px;top:9px}.badge{right:9px;top:9px}.row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+  <button class="menuButton" id="menuButton" aria-label="Open AIR DRONE menu" aria-expanded="false">A</button>
+  <section class="panel" id="panel">
+    <div class="brand">
+      <div class="mark">A</div>
+      <div><h1>AIR DRONE</h1><div class="sub">ORIGINAL URBAN DELIVERY eVTOL CONCEPT</div></div>
+    </div>
+    <div class="row">
+      <button class="primary" id="demo">Run delivery demo</button>
+      <button id="pause">Pause</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div class="row two">
+      <button data-view="front">Front</button><button data-view="back">Back</button>
+      <button data-view="left">Left</button><button data-view="right">Right</button>
+      <button data-view="top">Top</button><button data-view="free">Free 3D</button>
+    </div>
+    <div class="specs">
+      <div class="spec"><div class="k">Aircraft</div><div class="v" id="mode">VTOL DELIVERY</div></div>
+      <div class="spec"><div class="k">Payload</div><div class="v">Smart Cargo Pod</div></div>
+      <div class="spec"><div class="k">Mission</div><div class="v" id="mission">Ready</div></div>
+      <div class="spec"><div class="k">Battery</div><div class="v" id="battery">100%</div><div id="batteryBar"><i></i></div></div>
+    </div>
+    <div class="status" id="status">Drag to orbit around the drone. Scroll or pinch to zoom.</div>
+    <div class="note">Design inspiration: modern Indian delivery eVTOL/multirotor proportions, a central cargo bay, high-mounted propulsion arms and a clean commercial profile. Branding here is fictional.</div>
+  </section>
+  <div class="badge">360° 3D MODEL</div>
+</div>
+
+<script>
+const menuButton=document.getElementById("menuButton");
+const panel=document.getElementById("panel");
+menuButton.addEventListener("click",()=>{
+  const open=panel.classList.toggle("open");
+  menuButton.setAttribute("aria-expanded",String(open));
+  menuButton.setAttribute("aria-label",open?"Close AIR DRONE menu":"Open AIR DRONE menu");
+});
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x05070a);
+scene.fog=new THREE.Fog(0x05070a,34,90);
+
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,120);
+camera.position.set(10,6.5,12);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.12;
+document.getElementById("view").appendChild(renderer.domElement);
+
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.enableDamping=true;orbit.dampingFactor=.06;orbit.minDistance=4;orbit.maxDistance=32;
+orbit.maxPolarAngle=Math.PI*.94;orbit.target.set(0,1.3,0);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x111820,2.1));
+const key=new THREE.DirectionalLight(0xffffff,4.0);
+key.position.set(8,13,9);key.castShadow=true;key.shadow.mapSize.set(2048,2048);scene.add(key);
+const fill=new THREE.DirectionalLight(0xbfd8ff,1.4);fill.position.set(-9,6,7);scene.add(fill);
+const rim=new THREE.DirectionalLight(0x8db9ff,1.8);rim.position.set(-8,8,-12);scene.add(rim);
+
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x080b0e,roughness:.78,metalness:.08}));
+ground.rotation.x=-Math.PI/2;ground.position.y=-2.0;ground.receiveShadow=true;scene.add(ground);
+
+const pad=new THREE.Mesh(new THREE.CylinderGeometry(6.8,.55,.16,96),new THREE.MeshStandardMaterial({color:0x151a20,roughness:.52,metalness:.34}));
+pad.position.y=-1.92;pad.receiveShadow=true;scene.add(pad);
+const ring=new THREE.Mesh(new THREE.RingGeometry(5.9,5.97,96),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));
+ring.rotation.x=-Math.PI/2;ring.position.y=-1.83;scene.add(ring);
+
+const blue=new THREE.MeshStandardMaterial({color:0x0f5c9e,roughness:.26,metalness:.58});
+const blue2=new THREE.MeshStandardMaterial({color:0x1f79c6,roughness:.3,metalness:.5});
+const white=new THREE.MeshStandardMaterial({color:0xeef1f4,roughness:.3,metalness:.25});
+const black=new THREE.MeshStandardMaterial({color:0x080a0c,roughness:.24,metalness:.8});
+const dark=new THREE.MeshStandardMaterial({color:0x1b222a,roughness:.4,metalness:.55});
+const glass=new THREE.MeshPhysicalMaterial({color:0x09121a,roughness:.08,metalness:.7,clearcoat:1,clearcoatRoughness:.08});
+const led=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:2.2});
+
+function box(w,h,d,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.castShadow=true;return m}
+function cyl(a,b,r,mat){
+  const v=new THREE.Vector3().subVectors(b,a),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,v.length(),24),mat);
+  m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());m.castShadow=true;return m;
+}
+function label(text,width,height,color="#111",font=900){
+  const c=document.createElement("canvas");c.width=1200;c.height=220;const x=c.getContext("2d");
+  x.clearRect(0,0,c.width,c.height);x.fillStyle=color;x.font=`${font} 104px Arial`;x.textAlign="center";x.textBaseline="middle";x.fillText(text,600,112);
+  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false}));
+}
+
+// Original aircraft body
+const drone=new THREE.Group();drone.position.set(0,1.9,0);scene.add(drone);
+
+const fuselage=box(4.9,1.25,2.15,blue);
+fuselage.scale.z=.82;drone.add(fuselage);
+const nose=box(2.8,.64,1.92,white);nose.position.set(0,.76,.05);drone.add(nose);
+const canopy=box(1.6,.36,1.18,glass);canopy.position.set(0,1.16,.18);drone.add(canopy);
+
+const logo=label("AIR DRONE",2.25,.34,"#111");
+logo.position.set(0,.73,1.08);drone.add(logo);
+
+// Fixed wing surfaces — inspired by modern hybrid VTOL layout
+const wingL=box(4.2,.13,1.0,white);wingL.position.set(-3.0,.35,.02);wingL.rotation.y=-.03;drone.add(wingL);
+const wingR=box(4.2,.13,1.0,white);wingR.position.set(3.0,.35,.02);wingR.rotation.y=.03;drone.add(wingR);
+
+const tailL=box(1.65,.13,.62,white);tailL.position.set(-3.0,.55,-.25);drone.add(tailL);
+const tailR=box(1.65,.13,.62,white);tailR.position.set(3.0,.55,-.25);drone.add(tailR);
+
+// Six lift motors
+const motorPoints=[[-4.05,1.05,.0],[4.05,1.05,.0],[-2.15,1.02,1.75],[2.15,1.02,1.75],[-2.15,1.02,-1.75],[2.15,1.02,-1.75]];
+const rotors=[];
+for(const [x,y,z] of motorPoints){
+  const mount=cyl(new THREE.Vector3(x*.25,.45,z*.25),new THREE.Vector3(x,y,z),.13,dark);drone.add(mount);
+  const motor=box(.58,.38,.58,black);motor.position.set(x,y,z);drone.add(motor);
+  const light=new THREE.Mesh(new THREE.TorusGeometry(.29,.035,10,28),led);light.rotation.x=Math.PI/2;light.position.set(x,y+.22,z);drone.add(light);
+  const group=new THREE.Group();group.position.set(x,y+.27,z);
+  for(let i=0;i<2;i++){const blade=box(1.85,.035,.13,black);blade.rotation.y=i*Math.PI/2+Math.PI/8;group.add(blade)}
+  drone.add(group);rotors.push(group);
+}
+
+// Payload frame + cargo pod
+const frame=box(2.9,.22,1.95,black);frame.position.set(0,-.52,0);drone.add(frame);
+const pod=box(2.6,1.58,1.85,white);pod.position.set(0,-1.33,0);drone.add(pod);
+const podFront=box(2.68,1.66,.08,black);podFront.position.set(0,-1.33,.95);drone.add(podFront);
+const podLabel=label("INSTANT DELIVERY",2.3,.30,"#fff");podLabel.position.set(0,-1.32,.997);drone.add(podLabel);
+
+// Delivery winch visual concept
+const reel=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.30,24),black);
+reel.rotation.z=Math.PI/2;reel.position.set(0,-2.3,0);drone.add(reel);
+const cable=cyl(new THREE.Vector3(0,-2.48,0),new THREE.Vector3(0,-3.35,0),.025,dark);drone.add(cable);
+const hook=new THREE.Mesh(new THREE.TorusGeometry(.14,.035,12,24),black);hook.rotation.x=Math.PI/2;hook.position.set(0,-3.38,0);drone.add(hook);
+
+// Navigation lights
+for(const [x,z] of [[-2.2,1.04],[2.2,1.04],[-2.2,-1.04],[2.2,-1.04]]){
+  const l=new THREE.Mesh(new THREE.SphereGeometry(.09,16,12),led);l.position.set(x,.52,z);drone.add(l);
+}
+
+// Route for demo
+const points=[
+ new THREE.Vector3(0,1.9,0),
+ new THREE.Vector3(-5,5,3),
+ new THREE.Vector3(-1,7,6),
+ new THREE.Vector3(7,6,7),
+ new THREE.Vector3(11,3,9)
+];
+const curve=new THREE.CatmullRomCurve3(points);
+const rg=new THREE.BufferGeometry().setFromPoints(curve.getPoints(160));
+const route=new THREE.Line(rg,new THREE.LineDashedMaterial({color:0x6b7b8c,dashSize:.45,gapSize:.28}));
+route.computeLineDistances();scene.add(route);
+
+const customer=new THREE.Mesh(new THREE.CylinderGeometry(2.0,.4,.18,64),new THREE.MeshStandardMaterial({color:0x1d252c,roughness:.6}));
+customer.position.set(11,-1.84,9);customer.receiveShadow=true;scene.add(customer);
+const customerRing=new THREE.Mesh(new THREE.RingGeometry(1.65,1.72,64),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));
+customerRing.rotation.x=-Math.PI/2;customerRing.position.set(11,-1.73,9);scene.add(customerRing);
+const custLabel=label("CUSTOMER",1.65,.27,"#fff");custLabel.position.set(11,.25,11.05);custLabel.rotation.y=0;scene.add(custLabel);
+
+// Demo state
+const statusEl=document.getElementById("status"),missionEl=document.getElementById("mission"),batteryEl=document.getElementById("battery"),bar=document.querySelector("#batteryBar i");
+let state="Ready",progress=0,t0=0,paused=false,packageDrop=false;
+
+function ui(){
+ missionEl.textContent=state;batteryEl.textContent=Math.max(0,100-progress*32).toFixed(0)+"%";bar.style.transform=`scaleX(${Math.max(0,1-progress*.32)})`;
+}
+function startDemo(){progress=0;t0=performance.now();state="Flying";paused=false;packageDrop=false;statusEl.textContent="Demo flight started. The aircraft follows the displayed route to the customer.";ui()}
+function togglePause(){
+ if(state!=="Flying")return;paused=!paused;
+ statusEl.textContent=paused?"Demo paused. Press Pause again to resume.":"Demo resumed.";
+}
+function reset(){
+ state="Ready";progress=0;paused=false;packageDrop=false;drone.position.set(0,1.9,0);drone.rotation.set(0,0,0);
+ ui();statusEl.textContent="Ready. Drag the 3D view, or run the delivery demo.";packageMesh.visible=true;packageMesh.position.set(0,-3.05,0);
+}
+const packageMesh=new THREE.Mesh(new THREE.BoxGeometry(1.0,.75,.9),white);packageMesh.position.set(0,-3.05,0);packageMesh.castShadow=true;drone.add(packageMesh);
+const pkgLabel=label("AIR",.68,.22,"#111");pkgLabel.position.set(0,-3.05,.46);drone.add(pkgLabel);
+
+function setView(name){
+ const views={front:[0,4.7,14],back:[0,4.7,-14],left:[-14,4.7,0],right:[14,4.7,0],top:[0,15,.1],free:[9,6.5,12]};
+ const end=new THREE.Vector3(...views[name]),start=camera.position.clone(),old=orbit.target.clone(),tar=new THREE.Vector3(drone.position.x,drone.position.y-.5,drone.position.z),begin=performance.now();
+ function move(t){const p=Math.min((t-begin)/650,1),e=p*(2-p);camera.position.lerpVectors(start,end,e);orbit.target.lerpVectors(old,tar,e);orbit.update();if(p<1)requestAnimationFrame(move)}
+ requestAnimationFrame(move)
+}
+document.getElementById("demo").onclick=startDemo;
+document.getElementById("pause").onclick=togglePause;
+document.getElementById("reset").onclick=reset;
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+
+let last=performance.now();
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min((now-last)/1000,.05);last=now;
+ rotors.forEach((r,i)=>r.rotation.y+=dt*(25+(i%2)*3));
+ if(state==="Flying"&&!paused){
+  progress=Math.min(progress+dt/14.5,1);
+  drone.position.copy(curve.getPointAt(progress));
+  const tangent=curve.getTangentAt(Math.min(progress,.999));
+  drone.rotation.y=Math.atan2(tangent.x,tangent.z);
+  drone.rotation.z=-tangent.y*.10;
+  if(progress>.67&&!packageDrop){
+    packageDrop=true;packageMesh.visible=false;
+    statusEl.textContent="Package released at customer point. Drone continues the demo route.";
+  }
+  if(progress>=1){
+    state="Delivered";statusEl.textContent="Delivery demo complete. Package delivered.";
+  }
+  ui();
+ }
+ const pulse=1.8+Math.sin(now*.006)*.7;
+ scene.traverse(o=>{if(o.material&&o.material.emissive)o.material.emissiveIntensity=pulse});
+ orbit.update();renderer.render(scene,camera)
+}
+ui();setView("free");animate(performance.now());
+
+addEventListener("resize",()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
